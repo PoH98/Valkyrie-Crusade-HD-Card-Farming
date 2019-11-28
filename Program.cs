@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,8 @@ namespace HDCardDownloader
         private static List<string> found_cd = new List<string>();
         static void Main(string[] args)
         {
+            using (Process p = Process.GetCurrentProcess())
+                p.PriorityClass = ProcessPriorityClass.High;
             if (args.Length == 0)
             {
                 if (!Directory.Exists("thumb") && !File.Exists("thumb.txt"))
@@ -118,37 +121,28 @@ namespace HDCardDownloader
                     }
                     if (isInrange)
                     {
-                        int hour = currentUnixDateTime.Hour;
-                        if (hour >= 1 && hour <= 14)
+                        Console.ForegroundColor = ConsoleColor.DarkBlue;
+                        Console.Write("Starting Thread on ");
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.Write(unixtime);
+                        Console.ForegroundColor = ConsoleColor.DarkBlue;
+                        Console.Write(". (");
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.Write(currentUnixDateTime.ToString());
+                        Console.ForegroundColor = ConsoleColor.DarkBlue;
+                        Console.WriteLine(")");
+                        long checkunix = unixtime;
+                        while ((check.Count(td => td.Name == checkunix.ToString()) > 0))
                         {
-                            Console.ForegroundColor = ConsoleColor.DarkBlue;
-                            Console.Write("Starting Thread on ");
-                            Console.ForegroundColor = ConsoleColor.White;
-                            Console.Write(unixtime);
-                            Console.ForegroundColor = ConsoleColor.DarkBlue;
-                            Console.Write(". (");
-                            Console.ForegroundColor = ConsoleColor.White;
-                            Console.Write(currentUnixDateTime.ToString());
-                            Console.ForegroundColor = ConsoleColor.DarkBlue;
-                            Console.WriteLine(")");
-                            long checkunix = unixtime;
-                            while ((check.Count(td => td.Name == checkunix.ToString()) > 0))
-                            {
-                                checkunix++;
-                            }
-                            Thread t = new Thread(() =>
-                            {
-                                CheckFile(cd_id, unixtime);
-                            });
-                            t.Name = unixtime.ToString();
-                            check.Add(t);
-                            t.Start();
+                            checkunix++;
                         }
-                        else
+                        Thread t = new Thread(() =>
                         {
-                            EstimateLoopTimes = EstimateLoopTimes - cd_id.Length;
-                            continue;
-                        }
+                            CheckFile(cd_id, unixtime);
+                        });
+                        t.Name = unixtime.ToString();
+                        check.Add(t);
+                        t.Start();
                     }
                     else
                     {
@@ -162,23 +156,36 @@ namespace HDCardDownloader
                 }
                 if(found_cd.Count() < cd_id.Length)
                 {
+                    cd_id = cd_id.Except(found_cd.ToArray()).ToArray();
+                    found_cd.Clear();
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Some files missed, retrying...");
                     lastunixtime = 1360920650;
                     check.Clear();
                     for (long unixtime = lastunixtime; unixtime < startTimeStamp; unixtime++)
                     {
+                        DateTimeOffset currentUnixDateTime = DateTimeOffset.FromUnixTimeSeconds(unixtime).ToUniversalTime();
                         while (check.Count(tc => tc.IsAlive) >= threadnum)
                         {
+                            Console.WriteLine("Left " + (cd_id.Length - found_cd.Count()) + " cards to be found!");
                             Thread.Sleep(10000);
                         }
-                        Thread t = new Thread(() =>
+                        if(currentUnixDateTime.Hour >= 1 && currentUnixDateTime.Hour <= 14)
                         {
-                            Console.WriteLine("Gaining cards again from timestamp " + unixtime);
-                            CheckFile(cd_id, unixtime);
-                        });
-                        check.Add(t);
-                        t.Start();
+                            Thread t = new Thread(() =>
+                            {
+                                Console.WriteLine("Gaining cards again from timestamp " + unixtime);
+                                CheckFile(cd_id, unixtime);
+                            });
+                            check.Add(t);
+                            t.Start();
+                        }
+                        else
+                        {
+                            currentUnixDateTime = currentUnixDateTime.AddHours(1);
+                            unixtime = new DateTimeOffset(currentUnixDateTime.Year, currentUnixDateTime.Month, currentUnixDateTime.Day, currentUnixDateTime.Hour, 0, 0, new TimeSpan(0,0,0)).ToUnixTimeSeconds();
+                            continue;
+                        }
                     }
                 }
                 Array.Resize(ref args, 1);
@@ -216,9 +223,9 @@ namespace HDCardDownloader
                         {
                             flag = true;
                         }
+                        fileStream.Close();
                         if (flag)
                         {
-                            fileStream.Close();
                             uint num2 = BitConverter.ToUInt32(array, 12);
                             uint num3 = 1169124957u;
                             byte[] array2 = new byte[array.Length - 16];
@@ -231,7 +238,7 @@ namespace HDCardDownloader
                                 bytes.CopyTo(array2, i * 4);
                             }
                             byte[] array3 = new byte[4];
-                            int num6 = 0;
+                            int num6 = 0; 
                             for (int i = 16 + num4 * 4; i < array.Length; i++)
                             {
                                 array3[num6] = array[i];
