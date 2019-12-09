@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
-using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace HDCardDownloader
@@ -33,8 +32,6 @@ namespace HDCardDownloader
                     found_cd = templist.Select(cd => { 
                         string tempcd = cd.Remove(0, cd.LastIndexOf('/') + 1);
                         tempcd = tempcd.Remove(tempcd.LastIndexOf("."));
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine("Url had gained as " + cd);
                         return tempcd;
                     }).ToList();
                     var tempunix = templist.Select(link =>
@@ -45,6 +42,8 @@ namespace HDCardDownloader
                     lastunixtime = Convert.ToInt64(tempunix[tempunix.Length-1]);
                     File.WriteAllLines("url.txt", templist);
                 }
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Existing Url gained as " + found_cd.Count());
                 string[] cd_id = new string[] { };
                 if (!File.Exists("thumb.txt"))
                 {
@@ -95,6 +94,7 @@ namespace HDCardDownloader
                     while (check.Count(tc => tc.IsAlive) >= threadnum)
                     {
                         Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.Write(DateTime.Now.ToString() + ": ");
                         double percentage = 100 - (((double)(EstimateLoopTimes * 100)) / (double)MaxLoopTimes);
                         Console.Write("Estimate loops left: " + EstimateLoopTimes.ToString("###,###,###,###,###,###,###") + ". Completed ");
                         Console.ForegroundColor = ConsoleColor.White;
@@ -113,6 +113,8 @@ namespace HDCardDownloader
                             if(currentUnixDateTime <= eventsearchend)
                             {
                                 Console.ForegroundColor = ConsoleColor.DarkGray;
+                                Console.Write(DateTime.Now.ToString() + ": ");
+                                Console.ForegroundColor = ConsoleColor.DarkGray;
                                 Console.WriteLine("Start search at " + eventsearchstart + "-" + eventsearchend);
                                 isInrange = true;
                                 break;
@@ -121,6 +123,8 @@ namespace HDCardDownloader
                     }
                     if (isInrange)
                     {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.Write(DateTime.Now.ToString() + ": ");
                         Console.ForegroundColor = ConsoleColor.DarkBlue;
                         Console.Write("Starting Thread on ");
                         Console.ForegroundColor = ConsoleColor.White;
@@ -147,8 +151,10 @@ namespace HDCardDownloader
                     else
                     {
                         unixtime = currentUnixDateTime.AddHours(1).ToUnixTimeSeconds();
-                        Console.ForegroundColor = ConsoleColor.Green;
                         long reduced = ((cd_id.Length * 3600) + 3600);
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.Write(DateTime.Now.ToString() + ": ");
+                        Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine("Skipping timestamp " + currentUnixDateTime + ". Reduced " + reduced + " loops.");
                         EstimateLoopTimes = EstimateLoopTimes - reduced;
                         continue;
@@ -174,6 +180,8 @@ namespace HDCardDownloader
                         {
                             Thread t = new Thread(() =>
                             {
+                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                Console.Write(DateTime.Now.ToString() + ": ");
                                 Console.WriteLine("Gaining cards again from timestamp " + unixtime);
                                 CheckFile(cd_id, unixtime);
                             });
@@ -284,6 +292,8 @@ namespace HDCardDownloader
                             Retry:
                             try
                             {
+                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                Console.Write(DateTime.Now.ToString() + ": ");
                                 Console.ForegroundColor = ConsoleColor.Yellow;
                                 Console.WriteLine("Download Start on url " + l + " by WebClient");
                                 WebClient wc = new WebClient();
@@ -327,6 +337,8 @@ namespace HDCardDownloader
                     tried++;
                     if(tried >= 100)
                     {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.Write(DateTime.Now.ToString() + ": ");
                         Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.WriteLine("No cards on " + unixtime + " anymore!");
                         EstimateLoopTimes = EstimateLoopTimes - (cd_id.Length - Array.IndexOf(cd_id, card));
@@ -348,11 +360,15 @@ namespace HDCardDownloader
                 }
                 catch
                 {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write(DateTime.Now.ToString() + ": ");
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Unknown Exception found, retrying access...");
+                    Console.WriteLine("Error Accessing " + url);
                     goto Retry;
                 }
             }
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write(DateTime.Now.ToString() + ": ");
             Console.ForegroundColor = ConsoleColor.Magenta;
             DateTime currentUnixDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
             currentUnixDateTime = currentUnixDateTime.AddSeconds(unixtime);
@@ -367,27 +383,17 @@ namespace HDCardDownloader
 
         private static bool RemoteFileExists(Uri url)
         {
-            try
-            {
-                HttpWebRequest request = WebRequest.CreateHttp(url);
-                request.UserAgent = "???";
-                request.Proxy = null;
-                request.AllowAutoRedirect = false;
-                request.KeepAlive = true;
-                request.UnsafeAuthenticatedConnectionSharing = true;
-                request.AuthenticationLevel = AuthenticationLevel.None;
-                request.AllowReadStreamBuffering = false;
-                request.AllowWriteStreamBuffering = false;
-                HttpWebResponse response = request.GetResponseNoException();
-                return (response.StatusCode == HttpStatusCode.OK);
-            }
-            catch
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error accesssing server on url " + url);
-                //Any exception will returns false.
-                return false;
-            }
+            HttpWebRequest request = WebRequest.CreateHttp(url);
+            request.UserAgent = "Dalvik/1.6.0 (Linux; U; Android 4.4.4; LG-M700N Build/KTU84P)";
+            request.Proxy = null;
+            request.AllowAutoRedirect = false;
+            request.KeepAlive = true;
+            request.UnsafeAuthenticatedConnectionSharing = true;
+            request.AuthenticationLevel = AuthenticationLevel.None;
+            request.AllowReadStreamBuffering = false;
+            request.AllowWriteStreamBuffering = false;
+            HttpWebResponse response = request.GetResponseNoException();
+            return (response.StatusCode == HttpStatusCode.OK);
         }
         private static List<DateTimeOffset> findDate(string url)
         {
