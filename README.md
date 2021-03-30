@@ -19,3 +19,10 @@ This is a program that looks like "miner" which will "mine" Valkyrie Crusade HD 
 ***
 
 Again, I'm creating this program for learning purpose. User can limit the request speed so if they use this as an attack I'm no responsible for that! 
+
+# Valkyrie-Crusade-HD-Card-Farming v2
+So now as the game is now closing at May 30th, so I decided to make things fast, crawl the fandom wiki for images!
+## How to use:
+* Download the exe
+* Open and wait
+* All files will be downloaded in `Download` folder in same directory
